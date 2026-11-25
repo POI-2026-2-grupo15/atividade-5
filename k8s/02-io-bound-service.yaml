@@ -1,0 +1,13 @@
+# Exposição da io-bound: Service NodePort com porta fixa, destino do member no load balancer.
+apiVersion: v1
+kind: Service
+metadata:
+  name: io-bound
+  namespace: atividade5
+spec:
+  type: NodePort
+  selector: {app: io-bound}
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30002

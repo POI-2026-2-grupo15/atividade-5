@@ -23,7 +23,8 @@ Para testar as três de uma vez, rode:
 | [openstack/01-provisionar-vm.sh](openstack/01-provisionar-vm.sh) | Cria o par de chaves, o security group e a VM |
 | [openstack/02-configurar-load-balancer.sh](openstack/02-configurar-load-balancer.sh) | Aponta os listeners do grupo no `poi-atividades` para a VM |
 | [vm/instalar-minikube.sh](vm/instalar-minikube.sh) | Instala Docker, kubectl e Minikube na VM e sobe o cluster |
-| [k8s/](k8s/) | Manifestos do Kubernetes: namespace e um arquivo por aplicação |
+| [k8s/](k8s/) | Manifestos do Kubernetes: namespace e, para cada aplicação, um `*-deployment.yaml` (configuração do workload) e um `*-service.yaml` (exposição) |
+| [docs/Atividade-5.1-Infraestrutura-Kubernetes.docx](docs/Atividade-5.1-Infraestrutura-Kubernetes.docx) | Documento de entrega descrevendo as etapas |
 | [testar-acesso.sh](testar-acesso.sh) | Testa as três aplicações pelo IP do load balancer |
 
 ## Arquitetura
@@ -164,6 +165,12 @@ kubectl -n atividade5 get deploy,pods,svc,pvc
 ```
 
 Tudo fica no namespace `atividade5`, isolado dos componentes do sistema.
+
+| Aplicação | Configuração (workload) | Exposição (Service) |
+|---|---|---|
+| CPU-bound | [01-cpu-bound-deployment.yaml](k8s/01-cpu-bound-deployment.yaml) | [01-cpu-bound-service.yaml](k8s/01-cpu-bound-service.yaml) |
+| IO-bound | [02-io-bound-deployment.yaml](k8s/02-io-bound-deployment.yaml) (Deployment + PVC) | [02-io-bound-service.yaml](k8s/02-io-bound-service.yaml) |
+| Memory-bound | [03-memory-bound-deployment.yaml](k8s/03-memory-bound-deployment.yaml) | [03-memory-bound-service.yaml](k8s/03-memory-bound-service.yaml) |
 
 ![Deployments, pods, Services NodePort e o PVC do IO-bound (Bound, 2Gi) no namespace atividade5, além do consumo de cada pod (kubectl top).](docs/figuras/04-workloads.png)
 
