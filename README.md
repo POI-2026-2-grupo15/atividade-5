@@ -42,37 +42,7 @@ VM grupo-2-ahv-k8s-vm (Ubuntu 24.04, general.large: 4 vCPUs, 8 GB, 20 GB)
                  portas 30001-30003 publicadas na interface da VM
 ```
 
-## 1. Limpeza da infraestrutura anterior
-
-Os recursos da atividade 3/4 que eram do grupo foram removidos para liberar cota:
-
-```bash
-openstack server delete --wait grupo-2-ahv-vm       # VM general.small (1 vCPU, 2 GB)
-openstack volume delete grupo-2-ahv-vol             # volume de 1 GB (fica "available" após apagar a VM)
-openstack image delete grupo-2-ahv-vm-snapshot      # snapshot da VM
-```
-
-O load balancer `poi-atividades` e os recursos dos outros grupos **não** foram alterados. Os listeners e pools do grupo (portas 10001 a 10004) foram **mantidos e reaproveitados**: só os destinos (members) foram trocados (seção 4).
-
-Observação: existem dois load balancers chamados `poi-atividades`. O correto é o de UUID `57c2b14a-b746-4f34-8719-d0627e409609`, com VIP 10.5.8.242. Por isso os scripts usam o UUID.
-
-## 2. Acesso à CLI do OpenStack
-
-A CLI foi instalada localmente, com o plugin do load balancer (Octavia):
-
-```bash
-pipx install python-openstackclient
-pipx inject python-openstackclient python-octaviaclient
-```
-
-O arquivo OpenRC foi baixado no Horizon, em **Projeto → Acesso à API → Baixar arquivo OpenStack RC**, com o projeto **Provisionamento** selecionado. O domínio do usuário é `External`. A autenticação é feita assim:
-
-```bash
-source Provisionamento-openrc.sh   # pede a senha
-openstack token issue
-```
-
-## 3. Criação da VM — [openstack/01-provisionar-vm.sh](openstack/01-provisionar-vm.sh)
+## 1. Criação da VM — [openstack/01-provisionar-vm.sh](openstack/01-provisionar-vm.sh)
 
 1. **Par de chaves:** uma chave Ed25519 é gerada localmente (`~/.ssh/grupo-2-ahv-k8s`) e a parte pública é registrada como `grupo-2-ahv-k8s-key`.
 2. **Security group `grupo-2-ahv-k8s-sg`:**
@@ -96,9 +66,9 @@ Resultado:
 
 *Figura 1 — VM grupo-2-ahv-k8s-vm em ACTIVE, com flavor general.large (4 vCPUs, 8 GB), imagem ubuntu-24.04, chave e security group do grupo.*
 
-## 4. Load balancer — [openstack/02-configurar-load-balancer.sh](openstack/02-configurar-load-balancer.sh)
+## 2. Load balancer — [openstack/02-configurar-load-balancer.sh](openstack/02-configurar-load-balancer.sh)
 
-A VM só tem IP privado. Todo acesso externo, inclusive o SSH, passa pelo `poi-atividades`, seguindo a cadeia listener → pool → member. O script remove os members antigos, que apontavam para 10.5.11.32, e cria os novos com destino na VM:
+A VM só tem IP privado. Todo acesso externo, inclusive o SSH, passa pelo `poi-atividades`, seguindo a cadeia listener → pool → member. Cada listener do grupo tem um pool, e o script cadastra nele um member com destino na VM. Existem dois load balancers chamados `poi-atividades`; o correto é o de UUID `57c2b14a-b746-4f34-8719-d0627e409609` (VIP 10.5.8.242), por isso o script usa o UUID.
 
 | Listener | Protocolo/porta | Pool | Member (destino) |
 |---|---|---|---|
@@ -117,7 +87,7 @@ ssh -i ~/.ssh/grupo-2-ahv-k8s -p 10001 ubuntu@150.165.85.77
 
 *Figura 2 — Listeners do grupo no poi-atividades (portas 10001 a 10004) e os members de cada pool, todos apontando para a VM 10.5.9.224.*
 
-## 5. Instalação do Kubernetes com Minikube — [vm/instalar-minikube.sh](vm/instalar-minikube.sh)
+## 3. Instalação do Kubernetes com Minikube — [vm/instalar-minikube.sh](vm/instalar-minikube.sh)
 
 O script é copiado para a VM e executado:
 
@@ -148,7 +118,7 @@ kubectl get nodes -o wide
 
 *Figura 3 — Minikube em execução, nó Ready (Kubernetes v1.37.0, containerd) e as NodePorts 30001 a 30003 publicadas na interface da VM.*
 
-## 6. Deploy das aplicações — [k8s/](k8s/)
+## 4. Deploy das aplicações — [k8s/](k8s/)
 
 As imagens são as publicadas no Docker Hub na atividade 4. Todas escutam na porta 8000:
 
@@ -193,7 +163,7 @@ Em todos os casos:
   - Rotas: `/health` na CPU-bound e na IO-bound. A Memory-bound não tem `/health`, então as probes dela usam `/docs`.
 - **Requests e limits:** dão ao scheduler a reserva de cada pod (soma dos requests: 1,5 de 3 vCPUs) e impedem que uma aplicação consuma o nó inteiro.
 
-## 7. Verificação do acesso externo
+## 5. Verificação do acesso externo
 
 Pelo IP do load balancer, a partir de uma máquina fora da cloud:
 

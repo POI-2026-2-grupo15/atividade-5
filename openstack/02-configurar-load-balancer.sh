@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Aponta os listeners do grupo no load balancer compartilhado poi-atividades para a VM nova.
-# Os listeners e pools (portas 10001-10004) já existem desde a atividade 3; aqui só
-# trocamos os members (destinos) pelo IP da VM do Minikube.
+# Cada listener do grupo (portas 10001-10004) tem um pool; aqui cadastramos em cada
+# pool o member (destino) com o IP da VM do Minikube, substituindo qualquer member anterior.
 set -euo pipefail
 
 LB=57c2b14a-b746-4f34-8719-d0627e409609   # poi-atividades (há outro LB com o mesmo nome, por isso o UUID)
