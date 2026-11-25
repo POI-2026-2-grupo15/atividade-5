@@ -91,6 +91,10 @@ Resultado:
 | Flavor | general.large (4 vCPUs, 8192 MB) |
 | SO | Ubuntu 24.04.3 LTS |
 
+![VM grupo-2-ahv-k8s-vm em ACTIVE, com flavor general.large (4 vCPUs, 8 GB), imagem ubuntu-24.04, chave e security group do grupo.](docs/figuras/01-vm-openstack.png)
+
+*Figura 1 — VM grupo-2-ahv-k8s-vm em ACTIVE, com flavor general.large (4 vCPUs, 8 GB), imagem ubuntu-24.04, chave e security group do grupo.*
+
 ## 4. Load balancer — [openstack/02-configurar-load-balancer.sh](openstack/02-configurar-load-balancer.sh)
 
 A VM só tem IP privado. Todo acesso externo, inclusive o SSH, passa pelo `poi-atividades`, seguindo a cadeia listener → pool → member. O script remove os members antigos, que apontavam para 10.5.11.32, e cria os novos com destino na VM:
@@ -107,6 +111,10 @@ Acesso SSH à VM:
 ```bash
 ssh -i ~/.ssh/grupo-2-ahv-k8s -p 10001 ubuntu@150.165.85.77
 ```
+
+![Listeners do grupo no poi-atividades (portas 10001 a 10004) e os members de cada pool, todos apontando para a VM 10.5.9.224.](docs/figuras/02-load-balancer.png)
+
+*Figura 2 — Listeners do grupo no poi-atividades (portas 10001 a 10004) e os members de cada pool, todos apontando para a VM 10.5.9.224.*
 
 ## 5. Instalação do Kubernetes com Minikube — [vm/instalar-minikube.sh](vm/instalar-minikube.sh)
 
@@ -135,6 +143,10 @@ minikube status
 kubectl get nodes -o wide
 ```
 
+![Minikube em execução, nó Ready (Kubernetes v1.37.0, containerd) e as NodePorts 30001 a 30003 publicadas na interface da VM.](docs/figuras/03-minikube-cluster.png)
+
+*Figura 3 — Minikube em execução, nó Ready (Kubernetes v1.37.0, containerd) e as NodePorts 30001 a 30003 publicadas na interface da VM.*
+
 ## 6. Deploy das aplicações — [k8s/](k8s/)
 
 As imagens são as publicadas no Docker Hub na atividade 4. Todas escutam na porta 8000:
@@ -152,6 +164,10 @@ kubectl -n atividade5 get deploy,pods,svc,pvc
 ```
 
 Tudo fica no namespace `atividade5`, isolado dos componentes do sistema.
+
+![Deployments, pods, Services NodePort e o PVC do IO-bound (Bound, 2Gi) no namespace atividade5, além do consumo de cada pod (kubectl top).](docs/figuras/04-workloads.png)
+
+*Figura 4 — Deployments, pods, Services NodePort e o PVC do IO-bound (Bound, 2Gi) no namespace atividade5, além do consumo de cada pod (kubectl top).*
 
 ### Escolhas de workload (justificativa)
 
@@ -186,7 +202,31 @@ $ ./testar-acesso.sh
 {"files_processed":2,"records_received":4,"unique_records":3,"replaced_occurrences":1,...}
 ```
 
-Também foi verificado que o Service da CPU-bound distribui as requisições entre as duas réplicas. Foram enviadas sete requisições `/benchmark`: 3 foram atendidas por um pod e 4 pelo outro (`kubectl -n atividade5 logs <pod>`).
+
+![Saída do testar-acesso.sh executado em uma máquina fora da cloud: as três aplicações respondem pelo IP do load balancer.](docs/figuras/05-teste-externo.png)
+
+*Figura 5 — Saída do testar-acesso.sh executado em uma máquina fora da cloud: as três aplicações respondem pelo IP do load balancer.*
+
+Também foi verificado que o Service da CPU-bound distribui as requisições entre as duas réplicas: as requisições `/benchmark` enviadas de fora aparecem divididas entre os dois pods.
+
+![Contagem de requisições /benchmark nos logs de cada réplica da CPU-bound.](docs/figuras/06-balanceamento-cpu.png)
+
+*Figura 6 — Contagem de requisições /benchmark nos logs de cada réplica da CPU-bound.*
+
+Por fim, as páginas de documentação (Swagger) das três APIs, abertas no navegador pelo IP do load balancer:
+
+![CPU-bound em http://150.165.85.77:10002/docs.](docs/figuras/07-navegador-cpu-docs.png)
+
+*Figura 7 — CPU-bound em http://150.165.85.77:10002/docs.*
+
+![IO-bound em http://150.165.85.77:10003/docs.](docs/figuras/08-navegador-io-docs.png)
+
+*Figura 8 — IO-bound em http://150.165.85.77:10003/docs.*
+
+![Memory-bound em http://150.165.85.77:10004/docs.](docs/figuras/09-navegador-memory-docs.png)
+
+*Figura 9 — Memory-bound em http://150.165.85.77:10004/docs.*
+
 
 ## Comandos úteis na VM
 
